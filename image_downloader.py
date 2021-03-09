@@ -39,8 +39,8 @@ open(small_files, "w").close()  # create and close file
 
 
 class FileHashing:
-    def __init__(self):
-        self.hashed_json = Path(dir_setup()).joinpath("hashed_files.json")
+    def __init__(self, url):
+        self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
 
     @staticmethod
     def gethash(filepath, blocksize=65536):
@@ -50,13 +50,13 @@ class FileHashing:
                 hasher.update(chunk)
         return hasher.hexdigest()
 
-    def hashfiles(self):
+    def hashfiles(self, url):
         if not self.hashed_json.exists():
             with open(self.hashed_json, "w") as f:
                 f.write(json.dumps({}))
 
         hashes = {}
-        files = [f for f in Path(dir_setup()).iterdir() if f.is_file() and not f.name.endswith("json")]
+        files = [f for f in Path(dir_setup(url)).iterdir() if f.is_file() and not f.name.endswith("json")]
         [hashes.update({f.name: self.gethash(f)}) for f in files]
 
         with open(self.hashed_json) as f:
@@ -69,7 +69,7 @@ class FileHashing:
 
 class Downloader:
     def __init__(self, url, sksm=None):
-        self.hashed_json = Path(dir_setup()).joinpath("hashed_files.json")
+        self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36"
         }
@@ -149,17 +149,18 @@ class Downloader:
                             logger.info(f"Downloaded: {img_path.name}")
 
 
-def dir_setup():
-    path = parent.joinpath("IMG_Downloads")
+def dir_setup(url):
+    url = ".".join(urlparse(url).netloc.split(".")[1:])
+    path = parent.joinpath(f"IMG_Downloads/{url}")
     if not path.exists():
-        path.mkdir()
+        path.mkdir(parents=True,)
     return path
 
 
 def main(url, sksm=None, hashing=None, max_threads=None):
-    fh = FileHashing()
+    fh = FileHashing(url)
     downloader = Downloader(url, sksm)
-    download_dir = dir_setup()
+    download_dir = dir_setup(url)
     urls = [u for u in downloader.getlinks(url)]
 
     # If max_workers is None, it will default to min(32, os.cpu_count() + 4)
@@ -175,7 +176,7 @@ def main(url, sksm=None, hashing=None, max_threads=None):
 
     # Option to hash files
     if hashing:
-        fh.hashfiles()
+        fh.hashfiles(url)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-bs4
-coloredlogs
-lxml
-requests
+beautifulsoup4>=4.9.3
+coloredlogs>=15.0
+lxml>=4.6.2
+requests>=2.25.1
