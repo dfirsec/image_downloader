@@ -82,7 +82,6 @@ python image_downloader.py "<URL>" --sksm
 
 ```text
 <<< small_image_files.txt >>>
-
 Small File: <URL>/1235699.svg [3.75 KB]
 Small File: <URL>/abcdefg.png [3.985 KB]
 Small File: <URL>/xyz.png [5.091 KB]
