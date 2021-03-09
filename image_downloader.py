@@ -153,7 +153,7 @@ def dir_setup(url):
     url = ".".join(urlparse(url).netloc.split(".")[1:])
     path = parent.joinpath(f"IMG_Downloads/{url}")
     if not path.exists():
-        path.mkdir(parents=True,)
+        path.mkdir(parents=True)
     return path
 
 
