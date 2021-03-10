@@ -33,10 +33,6 @@ tc = Termcolors()
 # Base directory path
 parent = Path(__file__).resolve().parent
 
-# keep track of small files not downloaded
-small_files = parent.joinpath("small_image_files.txt")
-open(small_files, "w").close()  # create and close file
-
 
 class FileHashing:
     def __init__(self, url):
@@ -77,6 +73,9 @@ class Downloader:
         self.resp = requests.get(url, headers=self.headers)
         self.parser = urlparse(url)
         self.skip_small = sksm
+        # keep track of small files not downloaded
+        self.small_files = parent.joinpath("small_image_files.txt")
+        open(self.small_files, "w").close()  # create and close file
 
     def getlinks(self, url):
         try:
@@ -132,7 +131,7 @@ class Downloader:
 
                     if self.skip_small and bool(int(img_size) <= 20000):  # skip imagees smaller than 20 kB
                         size = round(float(int(img_size) / 1000), 3)
-                        with open(small_files, "a") as f:
+                        with open(self.small_files, "a") as f:
                             f.writelines(f"\nSmall File: {resp.url} [{size} KB]")
                         logger.info(f"{tc.fg.magenta}Skipped Image: {tc.reset}{img_path.name}")
 
