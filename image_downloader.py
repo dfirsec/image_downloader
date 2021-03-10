@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.2"
+__version__ = "v0.0.3"
 __description__ = "Website image downloader"
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class Downloader:
 
     def getlinks(self, url):
         try:
-            logger.info(f"{'Connecting to':15}: {tc.fg.cyan}{url}{tc.reset}")
+            logger.info(f"{'Connecting to':>15} : {tc.fg.cyan}{url}{tc.reset}")
             soup = BeautifulSoup(self.resp.content, "lxml")
             self.resp.raise_for_status()
         except Exception as err:
@@ -113,7 +113,7 @@ class Downloader:
         except URLError as e:
             logger.error(f"{e} {url}")
         except Exception as err:
-            logger.error(f"Download failed: {str(err)}: {url}")
+            logger.error(f"{'Download failed':>15} : {str(err)}: {url}")
         else:
             img_path = Path(directory).joinpath(Path(url).name)
 
@@ -134,11 +134,11 @@ class Downloader:
                         with open(self.small_files, "a") as f:
                             f.writelines(f"\nSmall File: {resp.url} [{size} KB]")
                         logger.info(
-                            f"{tc.fg.magenta}{'Skipped Image':15}{tc.reset}: {img_path.name} {tc.fg.gray}[{size} kB]{tc.reset}"
+                            f"{tc.fg.magenta}{'Skipped Image':>15}{tc.reset} : {img_path.name} {tc.fg.gray}[{size} kB]{tc.reset}"
                         )
 
                     elif img_path.exists() or add_ext.exists():
-                        logger.info(f"{tc.fg.yellow}{'File Exists':15}{tc.reset}: {img_path.name}")
+                        logger.info(f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {img_path.name}")
 
                     else:
                         suffix = img_path.suffix.replace(".", "")
@@ -147,7 +147,7 @@ class Downloader:
 
                         with open(img_path, "wb") as fileobj:
                             shutil.copyfileobj(resp, fileobj)
-                            logger.info(f"Downloaded: {img_path.name}")
+                            logger.info(f"{'Downloaded':>15} : {img_path.name}")
 
 
 def dir_setup(url):
@@ -197,9 +197,9 @@ if __name__ == "__main__":
         try:
             f = int(float(arg) * 10 ** 3)
         except ValueError:
-            raise argparse.ArgumentTypeError("Must be an integer value")
+            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be an integer value{tc.reset}")
         if f < MIN or f > MAX:
-            raise argparse.ArgumentTypeError(f"Argument must be > {MIN:,} kB and < {MAX:,} kB")
+            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be > {MIN:,} kB and < {MAX:,} kB{tc.reset}")
         return f
 
     parser = argparse.ArgumentParser()
@@ -218,4 +218,5 @@ if __name__ == "__main__":
     parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
 
     args = parser.parse_args()
+
     main(args.url, args.skip, args.hash, args.max)
