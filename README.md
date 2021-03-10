@@ -27,18 +27,18 @@ pip install -r requirements.txt
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
     | I m a g e   D o w n l o a d e r |
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
-    v0.0.1         DFIRSec (@pulsecode)
+    v0.0.2         DFIRSec (@pulsecode)
 
-usage: image_downloader.py [-h] [--sksm] [--max] [--hash] url
+usage: image_downloader.py [-h] [-s [N]] [-m] [-j] url
 
 positional arguments:
   url         destination url -- surround url string with double quotes
 
 optional arguments:
   -h, --help  show this help message and exit
-  --sksm      skip image files smaller than 20kB
-  --max       use max threads for downloading
-  --hash      create json record of hashed image files
+  -s [N]      skip image files < 20kB, or specify size from 10 to 50
+  -m          use max threads for downloading
+  -j          create json record of hashed image files
 ```
 
 ### Example Run
@@ -61,10 +61,10 @@ python image_downloader.py "<URL>"
 2021-03-09 08:26:30 INFO Downloaded: 20190327_131047.jpg
 ```
 
-#### Option to skip image files smaller that 20kB
+#### Option to skip image files smaller that 20kB. Default is 20, or specify between 10 - 50
 
 ```text
-python image_downloader.py "<URL>" --sksm
+python image_downloader.py "<URL>" -s
 
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
     | I m a g e   D o w n l o a d e r |
@@ -73,9 +73,9 @@ python image_downloader.py "<URL>" --sksm
 
 2021-03-09 08:53:12 INFO File Exists: 20200312_170237.jpg
 2021-03-09 08:53:12 INFO File Exists: 20190326_170715.jpg
-2021-03-09 08:53:12 INFO Small Image: 1235699.svg
-2021-03-09 08:53:12 INFO Small Image: abcdefg.png
-2021-03-09 08:53:12 INFO Small Image: xyz.png
+2021-03-09 08:53:12 INFO Small Image: 1235699.svg [3.58 kB]
+2021-03-09 08:53:12 INFO Small Image: abcdefg.png [9.05 kB]
+2021-03-09 08:53:12 INFO Small Image: xyz.png [3.75 kB]
 2021-03-09 08:53:12 INFO File Exists: 20190714_163629.jpg
 2021-03-09 08:53:12 INFO File Exists: 20200309_170653.jpg
 ```
@@ -90,11 +90,11 @@ Small File: <URL>/xyz.png [5.091 KB]
 #### Option to create json record of hashed image files
 
 ```text
-python image_downloader.py "<URL>" --hash
+python image_downloader.py "<URL>" -j
 ```
 
 #### Option to increase threads for faster file retrieval
 
 ```text
-python image_downloader.py "<URL>" --max
+python image_downloader.py "<URL>" -m
 ```

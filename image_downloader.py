@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.1"
+__version__ = "v0.0.2"
 __description__ = "Website image downloader"
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class FileHashing:
 
 
 class Downloader:
-    def __init__(self, url, sksm=None):
+    def __init__(self, url, skip=None):
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36"
@@ -72,14 +72,14 @@ class Downloader:
         self.url = url
         self.resp = requests.get(url, headers=self.headers)
         self.parser = urlparse(url)
-        self.skip_small = sksm
+        self.skip = skip
         # keep track of small files not downloaded
         self.small_files = parent.joinpath("small_image_files.txt")
         open(self.small_files, "w").close()  # create and close file
 
     def getlinks(self, url):
         try:
-            logger.info(f"Connecting to: {tc.fg.cyan}{url}{tc.reset}")
+            logger.info(f"{'Connecting to':15}: {tc.fg.cyan}{url}{tc.reset}")
             soup = BeautifulSoup(self.resp.content, "lxml")
             self.resp.raise_for_status()
         except Exception as err:
@@ -129,14 +129,16 @@ class Downloader:
                     repl_str = re.sub(pattern, "", img_path.name)
                     add_ext = Path(directory).joinpath(repl_str + "." + img_subtype)
 
-                    if self.skip_small and bool(int(img_size) <= 20000):  # skip imagees smaller than 20 kB
-                        size = round(float(int(img_size) / 1000), 3)
+                    if self.skip and bool(int(img_size) <= self.skip):
+                        size = round(float(int(img_size) / 1000), 2)
                         with open(self.small_files, "a") as f:
                             f.writelines(f"\nSmall File: {resp.url} [{size} KB]")
-                        logger.info(f"{tc.fg.magenta}Skipped Image: {tc.reset}{img_path.name}")
+                        logger.info(
+                            f"{tc.fg.magenta}{'Skipped Image':15}{tc.reset}: {img_path.name} {tc.fg.gray}[{size} kB]{tc.reset}"
+                        )
 
                     elif img_path.exists() or add_ext.exists():
-                        logger.info(f"{tc.fg.yellow}File Exists: {tc.reset}{img_path.name}")
+                        logger.info(f"{tc.fg.yellow}{'File Exists':15}{tc.reset}: {img_path.name}")
 
                     else:
                         suffix = img_path.suffix.replace(".", "")
@@ -156,9 +158,9 @@ def dir_setup(url):
     return path
 
 
-def main(url, sksm=None, hashing=None, max_threads=None):
+def main(url, skip=None, hashing=None, max_threads=None):
     fh = FileHashing(url)
-    downloader = Downloader(url, sksm)
+    downloader = Downloader(url, skip)
     download_dir = dir_setup(url)
     urls = [u for u in downloader.getlinks(url)]
 
@@ -188,12 +190,32 @@ if __name__ == "__main__":
 
     print(f"\033[36m{banner}\033[m")
 
+    # size range for file size (10kB - 50kB)
+    def size_limit(arg):
+        MIN = 10000
+        MAX = 50000
+        try:
+            f = int(float(arg) * 10 ** 3)
+        except ValueError:
+            raise argparse.ArgumentTypeError("Must be an integer value")
+        if f < MIN or f > MAX:
+            raise argparse.ArgumentTypeError(f"Argument must be > {MIN:,} kB and < {MAX:,} kB")
+        return f
+
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="destination url -- surround url string with double quotes")
-    parser.add_argument("--sksm", action="store_true", help="skip image files smaller than 20kB")
-    parser.add_argument("--max", action="store_true", help="use max threads for downloading")
-    parser.add_argument("--hash", action="store_true", help="create json record of hashed image files")
+    parser.add_argument(
+        "-s",
+        metavar="N",
+        dest="skip",
+        nargs="?",
+        const=20000,
+        type=size_limit,
+        default=20000,
+        help="skip image files < 20kB, or specify size from 10 to 50",
+    )
+    parser.add_argument("-m", dest="max", action="store_true", help="use max threads for downloading")
+    parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
 
     args = parser.parse_args()
-
-    main(args.url, args.sksm, args.hash, args.max)
+    main(args.url, args.skip, args.hash, args.max)
