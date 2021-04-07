@@ -6,12 +6,10 @@ import os
 import re
 import shutil
 import sys
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from http.client import responses
 from pathlib import Path
-from urllib.error import URLError
 from urllib.parse import urljoin, urlparse
 
 import coloredlogs
@@ -21,7 +19,7 @@ from bs4 import BeautifulSoup
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.3"
+__version__ = "v0.0.4"
 __description__ = "Website image downloader"
 
 logger = logging.getLogger(__name__)
@@ -64,7 +62,7 @@ class FileHashing:
 
 
 class Downloader:
-    def __init__(self, url, skip=None):
+    def __init__(self, url, skip):
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36"
@@ -108,46 +106,51 @@ class Downloader:
                 return results
 
     def download_file(self, directory, url):
+        resp = requests.get(url, headers=self.headers, stream=True)
         try:
-            req = urllib.request.Request(url, None, self.headers)
-        except URLError as e:
-            logger.error(f"{e} {url}")
-        except Exception as err:
-            logger.error(f"{'Download failed':>15} : {str(err)}: {url}")
+            resp.raise_for_status()
+        except requests.HTTPError as e:
+            if e.response.status_code == 403:
+                pass
+            else:
+                logger.error(f"{'Error':>15} : {str(e)}: {url}")
+        except Exception as e:
+            logger.error(f"{'Error':>15} : {str(e)}: {url}")
         else:
             img_path = Path(directory).joinpath(Path(url).name)
+            img_size = int(resp.headers["Content-Length"], 0)
+            file_size = round(float(int(img_size) / 1000), 2)
 
-            with urllib.request.urlopen(req) as resp:
-                img_size = resp.headers["Content-Length"]
-                img_maintype = resp.headers.get_content_maintype()
-                img_subtype = resp.headers.get_content_subtype()
+            img_maintype = resp.headers["Content-Type"].split("/")[0]
+            img_subtype = resp.headers["Content-Type"].split("/")[1]
 
-                if img_maintype == "image":
-                    # remove special characters from string and add file extension if missing
-                    special = "?=,:*-"
-                    pattern = "[" + special + "]"
-                    repl_str = re.sub(pattern, "", img_path.name)
-                    add_ext = Path(directory).joinpath(repl_str + "." + img_subtype)
+            if img_maintype == "image":
+                # remove special characters from string and add file extension if missing
+                pattern = r"(\W(jpg|gif|png).*)"
+                repl_str = re.sub(pattern, "", img_path.name)
 
-                    if self.skip and bool(int(img_size) <= self.skip):
-                        size = round(float(int(img_size) / 1000), 2)
-                        with open(self.small_files, "a") as f:
-                            f.writelines(f"\nSmall File: {resp.url} [{size} KB]")
-                        logger.info(
-                            f"{tc.fg.magenta}{'Skipped Image':>15}{tc.reset} : {img_path.name} {tc.fg.gray}[{size} kB]{tc.reset}"
-                        )
+                # replace file suffix with image subtype
+                suffix = img_path.suffix.replace(".", "")
+                if suffix != img_subtype and img_subtype != "svg+xml" and suffix != "jpg":
+                    img_path = Path(directory).joinpath(repl_str + "." + img_subtype)
 
-                    elif img_path.exists() or add_ext.exists():
-                        logger.info(f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {img_path.name}")
+                if bool(img_size < self.skip) and not img_path.exists():
+                    with open(self.small_files, "a") as f:
+                        f.writelines(f"\nSmall File: {resp.url} [{file_size} KB]")
+                    logger.info(
+                        f"{tc.fg.magenta}{'Skipping Image':>15}{tc.reset} : {img_path.name} {tc.fg.gray}({file_size} kB){tc.reset}"
+                    )
 
-                    else:
-                        suffix = img_path.suffix.replace(".", "")
-                        if suffix != img_subtype and img_subtype != "svg+xml" and suffix != "jpg":
-                            img_path = add_ext
+                elif img_path.exists():
+                    logger.info(
+                        f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {img_path.name} {tc.fg.gray}({file_size} kB){tc.reset}"
+                    )
 
-                        with open(img_path, "wb") as fileobj:
-                            shutil.copyfileobj(resp, fileobj)
-                            logger.info(f"{'Downloaded':>15} : {img_path.name}")
+                else:
+                    with open(img_path, "wb") as fileobj:
+                        resp.raw.decode_content = True
+                        shutil.copyfileobj(resp.raw, fileobj)
+                        logger.info(f"{'Downloaded':>15} : {img_path.name}")
 
 
 def dir_setup(url):
@@ -158,7 +161,7 @@ def dir_setup(url):
     return path
 
 
-def main(url, skip=None, hashing=None, max_threads=None):
+def main(url, skip, hashing=None, max_threads=None):
     fh = FileHashing(url)
     downloader = Downloader(url, skip)
     download_dir = dir_setup(url)
@@ -208,8 +211,6 @@ if __name__ == "__main__":
         "-s",
         metavar="N",
         dest="skip",
-        nargs="?",
-        const=20000,
         type=size_limit,
         default=20000,
         help="skip image files < 20kB, or specify size from 10 to 50",
