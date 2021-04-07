@@ -110,7 +110,8 @@ class Downloader:
         try:
             resp.raise_for_status()
         except requests.HTTPError as e:
-            if e.response.status_code == 403:
+            status = e.response.status_code
+            if status == 403 or status == 404:
                 pass
             else:
                 logger.error(f"{'Error':>15} : {str(e)}: {url}")
