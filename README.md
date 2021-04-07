@@ -29,14 +29,15 @@ pip install -r requirements.txt
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
     v0.0.2         DFIRSec (@pulsecode)
 
-usage: image_downloader.py [-h] [-s [N]] [-m] [-j] url
+usage: image_downloader.py [-h] [-s N] [-e] [-m] [-j] url
 
 positional arguments:
   url         destination url -- surround url string with double quotes
 
 optional arguments:
   -h, --help  show this help message and exit
-  -s [N]      skip image files < 20kB, or specify size from 10 to 50
+  -s N        skip image files < 20kB, or specify size from 10 to 50
+  -e          skip by image type/extension
   -m          use max threads for downloading
   -j          create json record of hashed image files
 ```
@@ -86,6 +87,13 @@ Small File: <URL>/1235699.svg [3.75 KB]
 Small File: <URL>/abcdefg.png [3.985 KB]
 Small File: <URL>/xyz.png [5.091 KB]
 ```
+
+#### Option to skip certain image file extensions, i.e., gif, jpg, png, webp
+
+```text
+python image_downloader.py "<URL>" -e <EXTENSION>
+```
+
 
 #### Option to create json record of hashed image files
 
