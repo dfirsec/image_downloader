@@ -32,7 +32,7 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
   -s N        size limit -- enter a value from 10 to 50 (default value is 20, so anything less than 20kB will not be downloaded)
-  -e          skip by image type/extension, i.e., exclude gif, jpg, webp, etc.
+  -e          exclude image type/extension, i.e., exclude gif, jpg, webp, etc.
   -j          create json record of hashed image files
 ```
 

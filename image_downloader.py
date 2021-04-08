@@ -239,7 +239,7 @@ if __name__ == "__main__":
         dest="ext",
         metavar="",
         default=False,
-        help="skip by image type/extension, i.e., exclude gif, jpg, webp, etc.",
+        help="exclude image type/extension, i.e., exclude gif, jpg, webp, etc.",
     )
     parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
 
