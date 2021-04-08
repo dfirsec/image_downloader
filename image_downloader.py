@@ -19,7 +19,7 @@ from urllib3.util.retry import Retry
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.6"
+__version__ = "v0.0.7"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
@@ -129,7 +129,6 @@ class Downloader:
             return results
 
     def download(self, directory, url):
-        global content_len
         resp = self.connector(url)
         img_path = Path(directory).joinpath(Path(url).name)
         try:
@@ -143,10 +142,7 @@ class Downloader:
             img_subtype = resp.headers["Content-Type"].split("/")[1]
 
             if img_maintype == "image":
-                if resp.headers["Content-Length"]:
-                    content_len = int(resp.headers["Content-Length"], 0)
-                elif resp.headers["Transfer-Encoding"]:
-                    content_len = len(resp.content)
+                content_len = len(resp.content)
 
                 # convert content-length to kB size format
                 kb_size = round(float(int(content_len) / 1000), 2)
@@ -167,20 +163,17 @@ class Downloader:
                 if bool(self.ext) and self.ext == img_subtype:
                     pass
 
-                elif bool(content_len < self.size) and not img_path.exists():
+                if bool(content_len < self.size) and not img_path.exists():
                     with open(self.small_files, "a") as f:
                         f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
-                    logger.info(f"{tc.fg.magenta}{'Skipping Image':>15}{tc.reset} : {size_results}")
-
-                elif img_path.exists():
-                    logger.info(f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {size_results}")
+                    logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
 
                 else:
                     with open(img_path, "wb") as fileobj:
                         for chunk in resp.iter_content(chunk_size=1024):
                             if chunk:
                                 fileobj.write(chunk)
-                        logger.info(f"{'Downloaded':>15} : {size_results}")
+                        logger.info(f"{'Downloaded':>10} : {size_results}")
 
 
 def dir_setup(url):
