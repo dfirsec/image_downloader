@@ -248,11 +248,10 @@ if __name__ == "__main__":
 
     # remove dot from extension if present
     if args.ext:
-        args.ext.replace(".", "")
+        args.ext = args.ext.replace(".", "")
 
         # account for variation in jpg extension format
         if args.ext == "jpg" or args.ext == ".jpg":
             args.ext = "jpeg"
 
     logger.info(f"{'Initiating connection':>15}")
-    main(args.url, args.size, args.ext, args.hash)
