@@ -103,7 +103,7 @@ class Downloader:
             return resp
 
     def getlinks(self, url):
-        logger.info(f"{'Gathering image links...':>15}")
+        logger.info(f"{'Gathering image links':>15}")
         resp = self.connector(url)
         soup = BeautifulSoup(resp.content, "lxml")
 
@@ -163,7 +163,8 @@ class Downloader:
                 if bool(self.ext) and self.ext == img_subtype:
                     pass
 
-                if bool(content_len < self.size) and not img_path.exists():
+                elif content_len < self.size and not img_path.exists():
+                    print(content_len, self.size)
                     with open(self.small_files, "a") as f:
                         f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
                     logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
@@ -231,16 +232,25 @@ if __name__ == "__main__":
         dest="size",
         type=size_limit,
         default=20000,
-        help="skip image files < 20kB, or specify size from 10 to 50",
+        help="size limit -- enter a value from 10 to 50 (default value is 20, so anything less than 20kB will not be downloaded)",
     )
-    parser.add_argument("-e", dest="ext", metavar="", default=False, help="skip by image type/extension")
+    parser.add_argument(
+        "-e",
+        dest="ext",
+        metavar="",
+        default=False,
+        help="skip by image type/extension, i.e., exclude gif, jpg, webp, etc.",
+    )
     parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
 
     args = parser.parse_args()
 
     # account for variation in jpg extension format
-    if args.ext == "jpg":
+    if "jpg" in args.ext:
         args.ext = "jpeg"
 
-    logger.info(f"{'Initiating connection...':>15}")
+    # remove dot from extension if present
+    args.ext = args.ext.replace(".", "")
+
+    logger.info(f"{'Initiating connection':>15}")
     main(args.url, args.size, args.ext, args.hash)
