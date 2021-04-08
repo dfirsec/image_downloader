@@ -4,23 +4,23 @@ import json
 import logging
 import os
 import re
-import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from http.client import responses
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import coloredlogs
 import requests
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.5"
-__description__ = "Website image downloader"
+__version__ = "v0.0.6"
+__description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(levelname)s %(message)s", logger=logger)
@@ -74,28 +74,31 @@ class Downloader:
         open(self.small_files, "w").close()  # create and close file
 
     @staticmethod
-    def connect(url, stream):
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.162 Safari/537.36"
-        }
-        resp = requests.get(url, headers=headers, stream=stream)
+    def connect(url):
+        with requests.Session() as session:
+            retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+            session.mount(url, HTTPAdapter(max_retries=retries))
+            resp = session.get(url, timeout=10)
+            resp.headers.update(
+                {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0"}
+            )
         try:
             resp.raise_for_status()
         except requests.HTTPError as e:
             status = e.response.status_code
-            if status == 403 or status == 404:
+            errors = [403, 429]
+            if status in errors:
                 pass
             else:
-                logger.error(f"{'Error':>15} : {str(e)}")
-        except Exception as e:
-            logger.error(f"{resp.status_code} {responses[resp.status_code]}: {url}")
-            sys.exit(logger.error(e))
+                sys.exit(logger.error(f"{str(e)}"))
+        except requests.exceptions.RequestException as e:
+            sys.exit(logger.error(f"{str(e)}"))
         else:
             return resp
 
     def getlinks(self, url):
-        resp = self.connect(url, stream=False)
-        logger.info(f"{'Connecting to':>15} : {tc.fg.cyan}{url}{tc.reset}")
+        logger.info(f"{'Gathering image links...':>15}")
+        resp = self.connect(url)
         soup = BeautifulSoup(resp.content, "lxml")
 
         # regex to validate urls
@@ -103,7 +106,7 @@ class Downloader:
 
         # find all potential images sources
         img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
-        img_links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) != None]
+        img_links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
         img_links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
         img_links3 = [link.get("href") for link in soup.find_all("a")]
         matches = img_links1 + img_links2 + img_links3
@@ -119,52 +122,64 @@ class Downloader:
         else:
             return results
 
-    def download_file(self, directory, url):
-        resp = self.connect(url, stream=True)
+    def download(self, directory, url):
+        global content_len
+        resp = self.connect(url)
         img_path = Path(directory).joinpath(Path(url).name)
-        content_len = int(resp.headers["Content-Length"], 0)
 
-        # convert content-length to kB size format
-        kb_size = round(float(int(content_len) / 1000), 2)
+        try:
+            # check for instance of headers
+            bool(resp.headers)
+        except Exception:
+            pass
+        else:
+            # split content-type image/jpg, or image/gif, etc.
+            img_maintype = resp.headers["Content-Type"].split("/")[0]
+            img_subtype = resp.headers["Content-Type"].split("/")[1]
 
-        # split content-type image/jpg, or image/gif, etc.
-        img_maintype = resp.headers["Content-Type"].split("/")[0]
-        img_subtype = resp.headers["Content-Type"].split("/")[1]
+            if img_maintype == "image":
+                if resp.headers["Transfer-Encoding"]:
+                    content_len = len(resp.content)
+                elif resp.headers["Content-Length"]:
+                    content_len = int(resp.headers["Content-Length"], 0)
 
-        if img_maintype == "image":
-            # remove special characters from string and add file extension if missing
-            pattern = r"(\W(jpg|gif|png).*)"
-            repl_str = re.sub(pattern, "", img_path.name)
+                # convert content-length to kB size format
+                kb_size = round(float(int(content_len) / 1000), 2)
 
-            # replace file suffix with actaul image subtype
-            suffix = img_path.suffix.replace(".", "")
-            if suffix != img_subtype and img_subtype != "svg+xml" and suffix != "jpg":
-                img_path = Path(directory).joinpath(repl_str + "." + img_subtype)
+                # remove special characters from string and add file extension if missing
+                pattern = r"(\W(jpg|gif|png).*)"
+                repl_str = re.sub(pattern, "", img_path.name)
 
-            # image size results wrapper
-            size_results = f"{img_path.name} {tc.fg.gray}[{kb_size} kB]{tc.reset}"
+                # replace file suffix with actaul image subtype
+                suffix = img_path.suffix.replace(".", "")
+                if suffix != img_subtype and img_subtype != "svg+xml" and suffix != "jpg":
+                    img_path = Path(directory).joinpath(repl_str + "." + img_subtype)
 
-            # skip image file extension/type
-            if bool(self.ext) and self.ext == img_subtype:
-                pass
+                # image size results wrapper
+                size_results = f"{img_path.name} {tc.fg.gray}[{kb_size} kB]{tc.reset}"
 
-            elif bool(content_len < self.size) and not img_path.exists():
-                with open(self.small_files, "a") as f:
-                    f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
-                logger.info(f"{tc.fg.magenta}{'Skipping Image':>15}{tc.reset} : {size_results}")
+                # skip image file extension/type
+                if bool(self.ext) and self.ext == img_subtype:
+                    pass
 
-            elif img_path.exists():
-                logger.info(f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {size_results}")
+                elif bool(content_len < self.size) and not img_path.exists():
+                    with open(self.small_files, "a") as f:
+                        f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
+                    logger.info(f"{tc.fg.magenta}{'Skipping Image':>15}{tc.reset} : {size_results}")
 
-            else:
-                with open(img_path, "wb") as fileobj:
-                    resp.raw.decode_content = True
-                    shutil.copyfileobj(resp.raw, fileobj)
-                    logger.info(f"{'Downloaded':>15} : {size_results}")
+                elif img_path.exists():
+                    logger.info(f"{tc.fg.yellow}{'File Exists':>15}{tc.reset} : {size_results}")
+
+                else:
+                    with open(img_path, "wb") as fileobj:
+                        for chunk in resp.iter_content(chunk_size=1024):
+                            if chunk:
+                                fileobj.write(chunk)
+                        logger.info(f"{'Downloaded':>15} : {size_results}")
 
 
 def dir_setup(url):
-    url = ".".join(urlparse(url).netloc.split(".")[1:])
+    url = "_dot_".join(urlparse(url).netloc.split(".")[1:])
     path = parent.joinpath(f"IMG_Downloads/{url}")
     if not path.exists():
         path.mkdir(parents=True)
@@ -173,19 +188,14 @@ def dir_setup(url):
 
 def main(url, size, ext=None, hashing=None, max_threads=None):
     fh = FileHashing(url)
-    downloader = Downloader(url, size, ext)
     download_dir = dir_setup(url)
+    downloader = Downloader(url, size, ext)
     urls = [u for u in downloader.getlinks(url)]
 
-    # If max_workers is None, it will default to min(32, os.cpu_count() + 4)
     # Ref: https://docs.python.org/3/library/concurrent.futures.html
-    if max_threads:
-        max_threads = min(32, os.cpu_count() + 4) * 2  # double the default
-    else:
-        max_threads = None
-
+    max_threads = min(32, os.cpu_count() + 4) * 2  # double the default
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
-        download_func = partial(downloader.download_file, download_dir)
+        download_func = partial(downloader.download, download_dir)
         executor.map(download_func, urls, timeout=30)
 
     # Option to hash files
@@ -226,7 +236,6 @@ if __name__ == "__main__":
         help="skip image files < 20kB, or specify size from 10 to 50",
     )
     parser.add_argument("-e", dest="ext", metavar="", default=False, help="skip by image type/extension")
-    parser.add_argument("-m", dest="max", action="store_true", help="use max threads for downloading")
     parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
 
     args = parser.parse_args()
@@ -235,4 +244,5 @@ if __name__ == "__main__":
     if args.ext == "jpg":
         args.ext = "jpeg"
 
+    logger.info(f"{'Initiating connection...':>15}")
     main(args.url, args.size, args.ext, args.hash, args.max)
