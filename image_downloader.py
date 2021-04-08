@@ -19,7 +19,7 @@ from urllib3.util.retry import Retry
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.7"
+__version__ = "v0.0.8"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
@@ -159,12 +159,13 @@ class Downloader:
                 # image size results wrapper
                 size_results = f"{img_path.name} {tc.fg.gray}[{kb_size} kB]{tc.reset}"
 
-                # skip image file extension/type
-                if bool(self.ext) and self.ext == img_subtype:
+                if img_path.exists():
+                    pass
+
+                elif bool(self.ext) and self.ext == img_subtype:
                     pass
 
                 elif content_len < self.size and not img_path.exists():
-                    print(content_len, self.size)
                     with open(self.small_files, "a") as f:
                         f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
                     logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
@@ -245,12 +246,13 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # account for variation in jpg extension format
-    if "jpg" in args.ext:
-        args.ext = "jpeg"
-
     # remove dot from extension if present
-    args.ext = args.ext.replace(".", "")
+    if args.ext:
+        args.ext.replace(".", "")
+
+        # account for variation in jpg extension format
+        if args.ext == "jpg" or args.ext == ".jpg":
+            args.ext = "jpeg"
 
     logger.info(f"{'Initiating connection':>15}")
     main(args.url, args.size, args.ext, args.hash)
