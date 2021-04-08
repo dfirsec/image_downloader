@@ -74,14 +74,20 @@ class Downloader:
         open(self.small_files, "w").close()  # create and close file
 
     @staticmethod
-    def connect(url):
-        with requests.Session() as session:
-            retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-            session.mount(url, HTTPAdapter(max_retries=retries))
-            resp = session.get(url, timeout=10)
-            resp.headers.update(
-                {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0"}
-            )
+    def session_worker():
+        session = requests.Session()
+        retries = Retry(total=3, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        return session
+
+    def connector(self, url):
+        session = self.session_worker()
+        resp = session.get(url, timeout=10)
+        resp.headers.update(
+            {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0"}
+        )
         try:
             resp.raise_for_status()
         except requests.HTTPError as e:
@@ -98,7 +104,7 @@ class Downloader:
 
     def getlinks(self, url):
         logger.info(f"{'Gathering image links...':>15}")
-        resp = self.connect(url)
+        resp = self.connector(url)
         soup = BeautifulSoup(resp.content, "lxml")
 
         # regex to validate urls
@@ -124,9 +130,8 @@ class Downloader:
 
     def download(self, directory, url):
         global content_len
-        resp = self.connect(url)
+        resp = self.connector(url)
         img_path = Path(directory).joinpath(Path(url).name)
-
         try:
             # check for instance of headers
             bool(resp.headers)
@@ -138,10 +143,10 @@ class Downloader:
             img_subtype = resp.headers["Content-Type"].split("/")[1]
 
             if img_maintype == "image":
-                if resp.headers["Transfer-Encoding"]:
-                    content_len = len(resp.content)
-                elif resp.headers["Content-Length"]:
+                if resp.headers["Content-Length"]:
                     content_len = int(resp.headers["Content-Length"], 0)
+                elif resp.headers["Transfer-Encoding"]:
+                    content_len = len(resp.content)
 
                 # convert content-length to kB size format
                 kb_size = round(float(int(content_len) / 1000), 2)
@@ -186,7 +191,7 @@ def dir_setup(url):
     return path
 
 
-def main(url, size, ext=None, hashing=None, max_threads=None):
+def main(url, size, ext=None, hashing=None):
     fh = FileHashing(url)
     download_dir = dir_setup(url)
     downloader = Downloader(url, size, ext)
@@ -245,4 +250,4 @@ if __name__ == "__main__":
         args.ext = "jpeg"
 
     logger.info(f"{'Initiating connection...':>15}")
-    main(args.url, args.size, args.ext, args.hash, args.max)
+    main(args.url, args.size, args.ext, args.hash)
