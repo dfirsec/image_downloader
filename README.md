@@ -24,20 +24,15 @@ pip install -r requirements.txt
 ## Usage
 
 ```console
-    +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
-    | I m a g e   D o w n l o a d e r |
-    +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
-    v0.0.2         DFIRSec (@pulsecode)
-
-usage: image_downloader2.py [-h] [-s N] [-e] [-j] url
+usage: image_downloader.py [-h] [-s N] [-e] [-j] url
 
 positional arguments:
   url         destination url -- surround url string with double quotes
 
 optional arguments:
   -h, --help  show this help message and exit
-  -s N        skip image files < 20kB, or specify size from 10 to 50
-  -e          skip by image type/extension
+  -s N        size limit -- enter a value from 10 to 50 (default value is 20, so anything less than 20kB will not be downloaded)
+  -e          skip by image type/extension, i.e., exclude gif, jpg, webp, etc.
   -j          create json record of hashed image files
 ```
 
