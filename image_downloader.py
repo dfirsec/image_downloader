@@ -255,3 +255,4 @@ if __name__ == "__main__":
             args.ext = "jpeg"
 
     logger.info(f"{'Initiating connection':>15}")
+    main(args.url, args.size, args.ext, args.hash)
