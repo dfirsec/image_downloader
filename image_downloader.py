@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
     print(f"\033[36m{banner}\033[m")
 
-    # size range for file size (10kB - 50kB)
+    # file size range (10kB - 50kB)
     def size_limit(arg):
         MIN = 10000
         MAX = 50000
