@@ -216,13 +216,15 @@ if __name__ == "__main__":
     # file size range (10kB - 50kB)
     def size_limit(arg):
         MIN = 10000
-        MAX = 50000
+        MAX = 1000000
         try:
             f = int(float(arg) * 10 ** 3)
         except ValueError:
             raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be an integer value{tc.reset}")
         if f < MIN or f > MAX:
-            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be > {MIN:,} kB and < {MAX:,} kB{tc.reset}")
+            raise argparse.ArgumentTypeError(
+                f"{tc.fg.yellow}Value must be between {int(MIN/1000):} and {int(MAX/1000):} (kB){tc.reset}"
+            )
         return f
 
     parser = argparse.ArgumentParser()
@@ -233,7 +235,7 @@ if __name__ == "__main__":
         dest="size",
         type=size_limit,
         default=20000,
-        help="size limit -- enter a value from 10 to 50 (default value is 20, so anything less than 20kB will not be downloaded)",
+        help="size limit -- enter a value from 10 to 1000 (default value is 20, so anything less than 20kB will not be downloaded)",
     )
     parser.add_argument(
         "-e",
