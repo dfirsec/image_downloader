@@ -86,7 +86,13 @@ class Downloader:
         session = self.session_worker()
         resp = session.get(url, timeout=10)
         resp.headers.update(
-            {"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0"}
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Connection": "keep-alive",
+                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
+            }
         )
         try:
             resp.raise_for_status()
@@ -105,28 +111,31 @@ class Downloader:
     def getlinks(self, url):
         logger.info(f"{'Gathering image links':>15}")
         resp = self.connector(url)
-        soup = BeautifulSoup(resp.content, "lxml")
-
-        # regex to validate urls
-        regex_url = r"(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=\*]*))"
-
-        # find all potential images sources
-        img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
-        img_links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
-        img_links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
-        img_links3 = [link.get("href") for link in soup.find_all("a")]
-        matches = img_links1 + img_links2 + img_links3
-
-        # validate the urls from combined full list
-        links_joined = [urljoin(url, link) for link in matches]
-        valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
-        results = list(set(valid_url))  # remove any duplicates from list
-
-        # if no images found
-        if not results:
-            sys.exit(logger.info(f"{tc.fg.yellow}No images available for download{tc.reset}"))
+        try:
+            soup = BeautifulSoup(resp.content, "lxml")
+        except AttributeError:
+            sys.exit(logger.error("Problem encountered accessing content"))
         else:
-            return results
+            # regex to validate urls
+            regex_url = r"(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=\*]*))"
+
+            # find all potential images sources
+            img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
+            links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
+            links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
+            links3 = [link.get("href") for link in soup.find_all("a")]
+            matches = links1 + links2 + links3
+
+            # validate the urls from combined full list
+            links_joined = [urljoin(url, link) for link in matches]
+            valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
+            results = list(set(valid_url))  # remove any duplicates from list
+
+            # if no images found
+            if not results:
+                sys.exit(logger.info(f"{tc.fg.yellow}No images available for download{tc.reset}"))
+            else:
+                return results
 
     def download(self, directory, url):
         resp = self.connector(url)
