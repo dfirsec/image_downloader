@@ -74,9 +74,9 @@ class Downloader:
 
     def connector(self, url):
         scraper = cfscrape.CloudflareScraper()
-        resp = scraper.get(url, timeout=10)       
+        resp = scraper.get(url, timeout=10)
         resp.headers.update(
-            {   
+            {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "en-US,en;q=0.9",
@@ -91,8 +91,7 @@ class Downloader:
         except (requests.HTTPError, requests.ReadTimeout) as e:
             status = e.response.status_code
             errors = [403, 429]
-            if status == 429:
-            # if status in errors:
+            if status in errors:
                 pass
             else:
                 sys.exit(logger.error(f"{str(e)}"))
