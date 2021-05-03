@@ -10,16 +10,15 @@ from functools import partial
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
+import cfscrape
 import coloredlogs
 import requests
 from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.8"
+__version__ = "v0.0.9"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
@@ -73,33 +72,27 @@ class Downloader:
         self.small_files = parent.joinpath("small_image_files.txt")
         open(self.small_files, "w").close()  # create and close file
 
-    @staticmethod
-    def session_worker():
-        session = requests.Session()
-        retries = Retry(total=3, backoff_factor=0.3, status_forcelist=[500, 502, 503, 504], raise_on_status=False)
-        adapter = HTTPAdapter(max_retries=retries)
-        session.mount("https://", adapter)
-        session.mount("http://", adapter)
-        return session
-
     def connector(self, url):
-        session = self.session_worker()
-        resp = session.get(url, timeout=10)
+        scraper = cfscrape.CloudflareScraper()
+        resp = scraper.get(url, timeout=10)       
         resp.headers.update(
-            {
+            {   
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "en-US,en;q=0.9",
+                "Cache-Control": "max-age=0",
                 "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
                 "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0",
             }
         )
         try:
             resp.raise_for_status()
-        except requests.HTTPError as e:
+        except (requests.HTTPError, requests.ReadTimeout) as e:
             status = e.response.status_code
             errors = [403, 429]
-            if status in errors:
+            if status == 429:
+            # if status in errors:
                 pass
             else:
                 sys.exit(logger.error(f"{str(e)}"))
