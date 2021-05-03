@@ -4,7 +4,7 @@
 
 I created this script as a method to download image files from forums that I visit. A few tests have demostrated that the script is generally successful across other "basic" websites -- website coding complexity may pose issues extracting image links.
 
-Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude, but I will optimize it to increase code efficiency.
+Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude.  Expect updates to optimize code efficiency.
 
 Files created by script:
 
