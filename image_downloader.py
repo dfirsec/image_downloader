@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.0.9"
+__version__ = "v0.1.0"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class Downloader:
         self.ext = ext
 
         # keep track of small files not downloaded
-        self.small_files = parent.joinpath("small_image_files.txt")
+        self.small_files = Path(dir_setup(url)).joinpath("small_image_files.txt")
         open(self.small_files, "w").close()  # create and close file
 
     def connector(self, url):
@@ -182,7 +182,7 @@ class Downloader:
 
 def dir_setup(url):
     url = "_dot_".join(urlparse(url).netloc.split(".")[1:])
-    path = parent.joinpath(f"IMG_Downloads/{url}")
+    path = parent.joinpath(f"Image_Downloads/{url}")
     if not path.exists():
         path.mkdir(parents=True)
     return path
