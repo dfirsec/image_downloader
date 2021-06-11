@@ -137,7 +137,7 @@ class Downloader:
         try:
             # check for instance of headers
             bool(resp.headers)
-        except Exception:
+        except:
             pass
         else:
             # split content-type image/jpg, or image/gif, etc.
