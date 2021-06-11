@@ -90,8 +90,7 @@ class Downloader:
             resp.raise_for_status()
         except (requests.HTTPError, requests.ReadTimeout) as e:
             status = e.response.status_code
-            errors = [403, 429]
-            if status in errors:
+            if status in (403, 429):
                 pass
             else:
                 sys.exit(logger.error(f"{str(e)}"))
@@ -115,13 +114,14 @@ class Downloader:
             img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
             links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
             links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
-            links3 = [link.get("href") for link in soup.find_all("a")]
+            links3 = [link.get("href") for link in soup.find_all("a") if link.get("href") is not None]
             matches = links1 + links2 + links3
 
             # validate the urls from combined full list
             links_joined = [urljoin(url, link) for link in matches]
             valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
             results = list(set(valid_url))  # remove any duplicates from list
+            
 
             # if no images found
             if not results:
