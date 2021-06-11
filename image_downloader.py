@@ -37,7 +37,7 @@ class FileHashing:
 
     @staticmethod
     def gethash(filepath, blocksize=65536):
-        hasher = hashlib.md5()
+        hasher = hashlib.sha256()
         with open(filepath, "rb") as f:
             for chunk in iter(partial(f.read, blocksize), b""):
                 hasher.update(chunk)
@@ -50,7 +50,8 @@ class FileHashing:
 
         hashes = {}
         files = [f for f in Path(dir_setup(url)).iterdir() if f.is_file() and not f.name.endswith("json")]
-        [hashes.update({f.name: self.gethash(f)}) for f in files]
+        for f in files:
+            hashes.update({f.name: self.gethash(f)})
 
         with open(self.hashed_json) as f:
             data = json.load(f)
@@ -72,7 +73,8 @@ class Downloader:
         self.small_files = Path(dir_setup(url)).joinpath("small_image_files.txt")
         open(self.small_files, "w").close()  # create and close file
 
-    def connector(self, url):
+    @staticmethod
+    def connector(url):
         scraper = cfscrape.CloudflareScraper()
         resp = scraper.get(url, timeout=10)
         resp.headers.update(
@@ -254,7 +256,7 @@ if __name__ == "__main__":
         args.ext = args.ext.replace(".", "")
 
         # account for variation in jpg extension format
-        if args.ext == "jpg" or args.ext == ".jpg":
+        if args.ext in ("jpg", ".jpg"):
             args.ext = "jpeg"
 
     logger.info(f"{'Initiating connection':>15}")
