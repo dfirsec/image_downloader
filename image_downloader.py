@@ -193,7 +193,7 @@ def main(url, size, ext=None, hashing=None):
     fh = FileHashing(url)
     download_dir = dir_setup(url)
     downloader = Downloader(url, size, ext)
-    urls = [u for u in downloader.getlinks(url)]
+    urls = list(downloader.getlinks(url))
 
     # Ref: https://docs.python.org/3/library/concurrent.futures.html
     max_threads = min(32, os.cpu_count() + 4) * 2  # double the default
