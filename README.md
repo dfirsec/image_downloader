@@ -7,10 +7,11 @@ I created this script as a method to download image files from forums that I vis
 Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude, but expect updates to optimize code.
 
 **Files created by script:**
-Image files container for:
-  Downloaded image files
-  JSON file of hashed image files
-Text file that includes a record of small images files skipped
+
+- Image files container for:
+  - Downloaded image files
+  - JSON file of hashed image files
+- Text file that includes a record of small images files skipped
 
 ## Installation
 
@@ -86,7 +87,6 @@ Small File: <URL>/xyz.png [5.091 KB]
 ```text
 python image_downloader.py "<URL>" -e <EXTENSION>
 ```
-
 
 #### Option to create json record of hashed image files
 
