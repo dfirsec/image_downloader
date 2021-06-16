@@ -1,7 +1,4 @@
-beautifulsoup4
-cfscrape
-coloredlogs
-lxml
-Pillow
-requests
-requests-html
+cfscrape>=2.1.1
+coloredlogs>=15.0.1
+Pillow>=8.2.0
+requests-html>=0.10.0
