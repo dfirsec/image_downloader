@@ -2,16 +2,16 @@
 
 [![DeepSource](https://deepsource.io/gh/dfirsec/image_downloader.svg/?label=active+issues&show_trend=true&token=m6N6VYo0LQ9cOP4r-43Qm5K3)](https://deepsource.io/gh/dfirsec/image_downloader/?ref=repository-badge) ![Generic badge](https://img.shields.io/badge/python-3.7-blue.svg) [![Twitter](https://img.shields.io/badge/Twitter-@pulsecode-blue.svg)](https://twitter.com/pulsecode)
 
-I created this script as a method to download image files from forums that I visit. A few tests have demostrated that the script is generally successful across other "basic" websites -- website coding complexity may pose issues extracting image links.
+I created this script as a method to download image files from forums that I visit. A few tests have demostrated that the script is generally successful across other "basic" websites, however, website coding complexity may pose issues extracting image links.
 
-Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude.  Expect updates to optimize code efficiency.
+Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude, but expect updates to optimize code.
 
 Files created by script:
 
-- Folder to store image files that contains:
+- Image files container for:
   - Downloaded image files
   - JSON file of hashed image files
-- Text file that includes a record of small images files skipped</li>
+- Text file that includes a record of small images files skipped
 
 ## Installation
 
@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-```console
+```text
 usage: image_downloader.py [-h] [-s N] [-e] [-j] url
 
 positional arguments:
@@ -44,7 +44,7 @@ python image_downloader.py "<URL>"
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
     | I m a g e   D o w n l o a d e r |
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
-    v0.0.1         DFIRSec (@pulsecode)
+    v0.x.x         DFIRSec (@pulsecode)
 
 2021-03-09 08:26:28 INFO Connecting to: https://<URL>
 2021-03-09 08:26:28 INFO Downloaded: 20190327_174324.jpg
