@@ -132,7 +132,8 @@ class Worker:
             else:
                 return results
 
-    def downloader(self, url, filename, size_results):
+    @staticmethod
+    def downloader(url, filename, size_results):
         session = requests.Session()
         resp = session.get(url, stream=True)
         try:
