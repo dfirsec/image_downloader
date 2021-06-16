@@ -6,7 +6,7 @@ I created this script as a method to download image files from forums that I vis
 
 Basically, the script parses tags that contain potential links to image files and passes the results to a downloader. The script is a bit crude, but expect updates to optimize code.
 
-Files created by script:
+**Files created by script:**
 
 - Image files container for:
   - Downloaded image files
