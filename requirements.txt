@@ -2,5 +2,6 @@ beautifulsoup4
 cfscrape
 coloredlogs
 lxml
+Pillow
 requests
 requests-html

@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -14,11 +15,12 @@ import cfscrape
 import coloredlogs
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image
 
 from termcolors import Termcolors
 
 __author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.1.0"
+__version__ = "v0.1.1"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
@@ -61,7 +63,7 @@ class FileHashing:
             json.dump(data, f, indent=4)
 
 
-class Downloader:
+class Worker:
     def __init__(self, url, size, ext):
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.url = url
@@ -74,9 +76,9 @@ class Downloader:
         open(self.small_files, "w").close()  # create and close file
 
     @staticmethod
-    def connector(url):
-        scraper = cfscrape.CloudflareScraper()
-        resp = scraper.get(url, timeout=10)
+    def scraper(url):
+        cfscraper = cfscrape.CloudflareScraper()
+        resp = cfscraper.get(url, stream=True, timeout=10)
         resp.headers.update(
             {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -103,7 +105,7 @@ class Downloader:
 
     def getlinks(self, url):
         logger.info(f"{'Gathering image links':>15}")
-        resp = self.connector(url)
+        resp = self.scraper(url)
         try:
             soup = BeautifulSoup(resp.content, "lxml")
         except AttributeError:
@@ -123,7 +125,6 @@ class Downloader:
             links_joined = [urljoin(url, link) for link in matches]
             valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
             results = list(set(valid_url))  # remove any duplicates from list
-            
 
             # if no images found
             if not results:
@@ -131,21 +132,40 @@ class Downloader:
             else:
                 return results
 
-    def download(self, directory, url):
-        resp = self.connector(url)
+    def downloader(self, url, filename, size_results):
+        session = requests.Session()
+        resp = session.get(url, stream=True)
+        try:
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            sys.exit(logger.error(f"{str(e)}"))
+        else:
+            with open(filename, "wb") as f:
+                resp.raw.decode_content = True
+                shutil.copyfileobj(resp.raw, f)
+                logger.info(f"{'Downloaded':>10} : {size_results}")
+            return filename
+
+    def processor(self, directory, url):
+        resp = self.scraper(url)
         img_path = Path(directory).joinpath(Path(url).name)
         try:
-            # check for instance of headers
-            bool(resp.headers)
+            bool(resp.headers)  # check for instance of headers
         except requests.exceptions.RequestException:
             pass
         else:
-            # split content-type image/jpg, or image/gif, etc.
-            img_maintype = resp.headers["Content-Type"].split("/")[0]
-            img_subtype = resp.headers["Content-Type"].split("/")[1]
+            # image file formats
+            img_format = ("apng", "bmp", "gif", "jpeg", "png", "webp")
 
-            if img_maintype == "image":
-                content_len = len(resp.content)
+            # change image format to account for cloudlfare image compression
+            # ref: https://support.cloudflare.com/hc/en-us/articles/360000607372-Using-Cloudflare-Polish-to-compress-images
+            if "jpeg" in resp.headers["Cf-Polished"]:
+                img_subtype = "jpeg"
+            else:
+                img_subtype = Image.open(resp.raw).format.lower()  # use PIL to verify and return image format
+
+            if img_subtype in img_format:
+                content_len = resp.headers["Content-length"]
 
                 # convert content-length to kB size format
                 kb_size = round(float(int(content_len) / 1000), 2)
@@ -154,34 +174,35 @@ class Downloader:
                 pattern = r"(\W(jpg|gif|png).*)"
                 repl_str = re.sub(pattern, "", img_path.name)
 
-                # replace file suffix with actaul image subtype
+                # replace file suffix with actual image subtype
                 suffix = img_path.suffix.replace(".", "")
-                if suffix != img_subtype and img_subtype != "svg+xml" and suffix != "jpg":
+                if suffix != img_subtype:
                     img_path = Path(directory).joinpath(repl_str + "." + img_subtype)
 
                 # image size results wrapper
                 size_results = f"{img_path.name} {tc.fg.gray}[{kb_size} kB]{tc.reset}"
 
+                # skip if image already existsin download directory
                 if img_path.exists():
                     pass
 
+                # check if image file format argument is passed
                 elif bool(self.ext) and self.ext == img_subtype:
                     pass
 
-                elif content_len < self.size and not img_path.exists():
+                # skip image file by size
+                elif int(content_len) < self.size:
                     with open(self.small_files, "a") as f:
                         f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
                     logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
 
+                # pass to file downloader
                 else:
-                    with open(img_path, "wb") as fileobj:
-                        for chunk in resp.iter_content(chunk_size=1024):
-                            if chunk:
-                                fileobj.write(chunk)
-                        logger.info(f"{'Downloaded':>10} : {size_results}")
+                    self.downloader(url, img_path, size_results)
 
 
 def dir_setup(url):
+    """Sets up download directory"""
     url = "_dot_".join(urlparse(url).netloc.split(".")[1:])
     path = parent.joinpath(f"Image_Downloads/{url}")
     if not path.exists():
@@ -192,13 +213,13 @@ def dir_setup(url):
 def main(url, size, ext=None, hashing=None):
     fh = FileHashing(url)
     download_dir = dir_setup(url)
-    downloader = Downloader(url, size, ext)
-    urls = list(downloader.getlinks(url))
+    worker = Worker(url, size, ext)
+    urls = list(worker.getlinks(url))
 
     # Ref: https://docs.python.org/3/library/concurrent.futures.html
     max_threads = min(32, os.cpu_count() + 4) * 2  # double the default
     with ThreadPoolExecutor(max_workers=max_threads) as executor:
-        download_func = partial(downloader.download, download_dir)
+        download_func = partial(worker.processor, download_dir)
         executor.map(download_func, urls, timeout=30)
 
     # Option to hash files
