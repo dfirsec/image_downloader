@@ -24,7 +24,9 @@ __version__ = "v0.1.1"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
-coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(levelname)s %(message)s", logger=logger)
+coloredlogs.install(
+    level="DEBUG", fmt="%(asctime)s %(levelname)s %(message)s", logger=logger
+)
 
 # Initialize terminal colors
 tc = Termcolors()
@@ -51,7 +53,11 @@ class FileHashing:
                 f.write(json.dumps({}))
 
         hashes = {}
-        files = [f for f in Path(dir_setup(url)).iterdir() if f.is_file() and not f.name.endswith("json")]
+        files = [
+            f
+            for f in Path(dir_setup(url)).iterdir()
+            if f.is_file() and not f.name.endswith("json")
+        ]
         for f in files:
             hashes.update({f.name: self.gethash(f)})
 
@@ -116,19 +122,37 @@ class Worker:
 
             # find all potential images sources
             img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
-            links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
-            links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
-            links3 = [link.get("href") for link in soup.find_all("a") if link.get("href") is not None]
+            links1 = [
+                link.get(src)
+                for src in img_src
+                for link in soup.find_all("img")
+                if link.get(src) is not None
+            ]
+            links2 = [
+                i["href"]
+                for i in (img.find_parent("a") for img in soup.select("a[href] img"))
+            ]
+            links3 = [
+                link.get("href")
+                for link in soup.find_all("a")
+                if link.get("href") is not None
+            ]
             matches = links1 + links2 + links3
 
             # validate the urls from combined full list
             links_joined = [urljoin(url, link) for link in matches]
-            valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
+            valid_url = [
+                match.group(0) for match in re.finditer(regex_url, str(links_joined))
+            ]
             results = list(set(valid_url))  # remove any duplicates from list
 
             # if no images found
             if not results:
-                sys.exit(logger.info(f"{tc.fg.yellow}No images available for download{tc.reset}"))
+                sys.exit(
+                    logger.info(
+                        f"{tc.fg.yellow}No images available for download{tc.reset}"
+                    )
+                )
             else:
                 return results
 
@@ -162,7 +186,9 @@ class Worker:
             if "jpeg" in resp.headers["Cf-Polished"]:
                 img_subtype = "jpeg"
             else:
-                img_subtype = Image.open(resp.raw).format.lower()  # use PIL to verify and return image format
+                img_subtype = Image.open(
+                    resp.raw
+                ).format.lower()  # use PIL to verify and return image format
 
             if img_subtype in img_format:
                 content_len = resp.headers["Content-length"]
@@ -194,7 +220,9 @@ class Worker:
                 elif int(content_len) < self.size:
                     with open(self.small_files, "a") as f:
                         f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
-                    logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
+                    logger.info(
+                        f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}"
+                    )
 
                 # pass to file downloader
                 else:
@@ -244,7 +272,9 @@ if __name__ == "__main__":
         try:
             f = int(float(arg) * 10 ** 3)
         except ValueError:
-            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be an integer value{tc.reset}")
+            raise argparse.ArgumentTypeError(
+                f"{tc.fg.yellow}Argument must be an integer value{tc.reset}"
+            )
         if f < MIN or f > MAX:
             raise argparse.ArgumentTypeError(
                 f"{tc.fg.yellow}Value must be between {int(MIN/1000):} and {int(MAX/1000):} (kB){tc.reset}"
@@ -252,7 +282,9 @@ if __name__ == "__main__":
         return f
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("url", help="destination url -- surround url string with double quotes")
+    parser.add_argument(
+        "url", help="destination url -- surround url string with double quotes"
+    )
     parser.add_argument(
         "-s",
         metavar="N",
@@ -268,7 +300,12 @@ if __name__ == "__main__":
         default=False,
         help="exclude image type/extension, i.e., exclude gif, jpg, webp, etc.",
     )
-    parser.add_argument("-j", dest="hash", action="store_true", help="create json record of hashed image files")
+    parser.add_argument(
+        "-j",
+        dest="hash",
+        action="store_true",
+        help="create json record of hashed image files",
+    )
 
     args = parser.parse_args()
 
