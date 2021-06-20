@@ -24,6 +24,7 @@ __version__ = "v0.1.1"
 __description__ = "Website Image Downloader"
 
 logger = logging.getLogger(__name__)
+logger.propagate = False
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(levelname)s %(message)s", logger=logger)
 
 # Initialize terminal colors
@@ -72,8 +73,7 @@ class Worker:
         self.ext = ext
 
         # keep track of small files not downloaded
-        self.small_files = Path(dir_setup(url)).joinpath("small_image_files.txt")
-        open(self.small_files, "w").close()  # create and close file
+        self.small_files = Path(dir_setup(url)).joinpath("small_image_files.log")
 
     @staticmethod
     def scraper(url):
@@ -191,10 +191,15 @@ class Worker:
                 elif bool(self.ext) and self.ext == img_subtype:
                     pass
 
-                # skip image file by size
+                # skip image file by size and write to log
                 elif int(content_len) < self.size:
-                    with open(self.small_files, "a") as f:
-                        f.writelines(f"\nSmall File: {resp.url} [{kb_size} kB]")
+                    logging.basicConfig(
+                        format="%(message)s",
+                        filename=self.small_files,
+                        filemode="w",
+                        level=logging.INFO,
+                    )
+                    logging.info(f"{resp.url} [{kb_size} kB]")
                     logger.info(f"{tc.fg.magenta}{'Skipped':>10}{tc.reset} : {size_results}")
 
                 # pass to file downloader

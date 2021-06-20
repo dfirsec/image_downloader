@@ -11,7 +11,7 @@ Basically, the script parses tags that contain potential links to image files an
 - Image files container for:
   - Downloaded image files
   - JSON file of hashed image files
-- Text file that includes a record of small images files skipped
+- Log record of small images files skipped
 
 ## Installation
 
