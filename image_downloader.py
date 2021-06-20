@@ -97,16 +97,16 @@ class Worker:
             if status in (403, 429):
                 pass
             else:
-                sys.exit(logger.error(f"{str(e)}"))
+                logger.error(f"{str(e)}")
         except requests.exceptions.RequestException as e:
-            sys.exit(logger.error(f"{str(e)}"))
+            logger.error(f"{str(e)}")
         else:
             return resp
 
     def getlinks(self, url):
         logger.info(f"{'Gathering image links':>15}")
-        resp = self.scraper(url)
         try:
+            resp = self.scraper(url)
             soup = BeautifulSoup(resp.content, "lxml")
         except AttributeError:
             sys.exit(logger.error("Problem encountered accessing content"))
