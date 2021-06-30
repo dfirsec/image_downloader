@@ -36,6 +36,7 @@ parent = Path(__file__).resolve().parent
 
 class FileHashing:
     def __init__(self, url):
+        """Return image file hash values."""
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
 
     @staticmethod
@@ -66,6 +67,7 @@ class FileHashing:
 
 class Worker:
     def __init__(self, url, size, ext):
+        """Returns content and link scraper."""
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.url = url
         self.parser = urlparse(url)
@@ -160,10 +162,10 @@ class Worker:
 
             # change image format to account for cloudlfare image compression
             # ref: https://support.cloudflare.com/hc/en-us/articles/360000607372-Using-Cloudflare-Polish-to-compress-images
-            if "jpeg" in resp.headers["Cf-Polished"]:
-                img_subtype = "jpeg"
-            else:
-                img_subtype = Image.open(resp.raw).format.lower()  # use PIL to verify and return image format
+            # if "jpeg" in resp.headers["Cf-Polished"]:
+            #     img_subtype = "jpeg"
+
+            img_subtype = Image.open(resp.raw).format.lower()
 
             if img_subtype in img_format:
                 content_len = resp.headers["Content-length"]
