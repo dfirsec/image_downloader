@@ -1,6 +1,6 @@
 # Image Downloader
 
-[![DeepSource](https://deepsource.io/gh/dfirsec/image_downloader.svg/?label=active+issues&show_trend=true&token=m6N6VYo0LQ9cOP4r-43Qm5K3)](https://deepsource.io/gh/dfirsec/image_downloader/?ref=repository-badge) ![Generic badge](https://img.shields.io/badge/python-3.7-blue.svg) [![Twitter](https://img.shields.io/badge/Twitter-@pulsecode-blue.svg)](https://twitter.com/pulsecode)
+![Generic badge](https://img.shields.io/badge/python-3.7-blue.svg) [![Twitter](https://img.shields.io/badge/Twitter-@pulsecode-blue.svg)](https://twitter.com/pulsecode)
 
 I created this script as a method to download image files from forums that I visit. A few tests have demostrated that the script is generally successful across other "basic" websites, however, website coding complexity may pose issues extracting image links.
 
