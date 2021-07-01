@@ -160,7 +160,7 @@ class Worker:
             # image file formats
             img_format = ("apng", "bmp", "gif", "jpeg", "png", "webp")
 
-            # change image format to account for cloudlfare image compression
+            # TODO: change image format to account for cloudlfare image compression
             # https://support.cloudflare.com/hc/en-us/articles/360000607372-Using-Cloudflare-Polish-to-compress-images
             # if "jpeg" in resp.headers["Cf-Polished"]:
             #     img_subtype = "jpeg"
