@@ -210,7 +210,7 @@ class Worker:
 
 
 def dir_setup(url):
-    """Sets up download directory"""
+    """Sets up download directory."""
     url = "_dot_".join(urlparse(url).netloc.split(".")[1:])
     path = parent.joinpath(f"Image_Downloads/{url}")
     if not path.exists():
@@ -267,7 +267,7 @@ if __name__ == "__main__":
         dest="size",
         type=size_limit,
         default=20000,
-        help="size limit -- enter a value from 10 to 1000 (default value is 20, so anything less than 20kB will not be downloaded)",
+        help="size limit -- enter a value from 10 to 1000 (default = 20, less than 20kB will not be downloaded)",
     )
     parser.add_argument(
         "-e",
