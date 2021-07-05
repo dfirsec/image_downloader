@@ -23,6 +23,7 @@ __author__ = "DFIRSec (@pulsecode)"
 __version__ = "v0.1.1"
 __description__ = "Website Image Downloader"
 
+# Primary logger
 logger = logging.getLogger(__name__)
 logger.propagate = False
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(levelname)s %(message)s", logger=logger)
@@ -35,39 +36,41 @@ parent = Path(__file__).resolve().parent
 
 
 class FileHashing:
+    """Return image file hash values."""
+
     def __init__(self, url):
-        """Return image file hash values."""
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
 
     @staticmethod
     def gethash(filepath, blocksize=65536):
         hasher = hashlib.sha256()
-        with open(filepath, "rb") as f:
-            for chunk in iter(partial(f.read, blocksize), b""):
+        with open(filepath, "rb") as file_obj:
+            for chunk in iter(partial(file_obj.read, blocksize), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
 
     def hashfiles(self, url):
         if not self.hashed_json.exists():
-            with open(self.hashed_json, "w") as f:
-                f.write(json.dumps({}))
+            with open(self.hashed_json, "w") as file_obj:
+                file_obj.write(json.dumps({}))
 
         hashes = {}
         files = [f for f in Path(dir_setup(url)).iterdir() if f.is_file() and not f.name.endswith("json")]
-        for f in files:
-            hashes.update({f.name: self.gethash(f)})
+        for _file in files:
+            hashes.update({_file.name: self.gethash(_file)})
 
-        with open(self.hashed_json) as f:
-            data = json.load(f)
+        with open(self.hashed_json) as file_obj:
+            data = json.load(file_obj)
         data.update(hashes)
 
-        with open(self.hashed_json, "w") as f:
-            json.dump(data, f, indent=4)
+        with open(self.hashed_json, "w") as file_obj:
+            json.dump(data, file_obj, indent=4)
 
 
 class Worker:
+    """Content and link scraper."""
+
     def __init__(self, url, size, ext):
-        """Returns content and link scraper."""
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.url = url
         self.parser = urlparse(url)
@@ -94,14 +97,14 @@ class Worker:
         )
         try:
             resp.raise_for_status()
-        except (requests.HTTPError, requests.ReadTimeout) as e:
-            status = e.response.status_code
+        except (requests.HTTPError, requests.ReadTimeout) as err:
+            status = err.response.status_code
             if status in (403, 429):
                 pass
             else:
                 logger.error(f"{str(e)}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"{str(e)}")
+        except requests.exceptions.RequestException as err:
+            logger.error(f"{str(err)}")
         else:
             return resp
 
@@ -140,12 +143,12 @@ class Worker:
         resp = session.get(url, stream=True)
         try:
             resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            sys.exit(logger.error(f"{str(e)}"))
+        except requests.exceptions.RequestException as error:
+            sys.exit(logger.error(f"{str(error)}"))
         else:
-            with open(filename, "wb") as f:
+            with open(filename, "wb") as file_obj:
                 resp.raw.decode_content = True
-                shutil.copyfileobj(resp.raw, f)
+                shutil.copyfileobj(resp.raw, file_obj)
                 logger.info(f"{'Downloaded':>10} : {size_results}")
             return filename
 
@@ -219,7 +222,7 @@ def dir_setup(url):
 
 
 def main(url, size, ext=None, hashing=None):
-    fh = FileHashing(url)
+    hasher = FileHashing(url)
     download_dir = dir_setup(url)
     worker = Worker(url, size, ext)
     urls = list(worker.getlinks(url))
@@ -232,7 +235,7 @@ def main(url, size, ext=None, hashing=None):
 
     # Option to hash files
     if hashing:
-        fh.hashfiles(url)
+        hasher.hashfiles(url)
 
 
 if __name__ == "__main__":
@@ -247,32 +250,32 @@ if __name__ == "__main__":
 
     # file size range (10kB - 50kB)
     def size_limit(arg):
-        MIN = 10000
-        MAX = 1000000
+        _min = 10000
+        _max = 1000000
         try:
-            f = int(float(arg) * 10 ** 3)
-        except ValueError:
-            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be an integer value{tc.reset}")
-        if f < MIN or f > MAX:
+            _float = int(float(arg) * 10 ** 3)
+        except ValueError as err:
+            raise argparse.ArgumentTypeError(f"{tc.fg.yellow}Argument must be an integer value{tc.reset}") from err
+        if _float < _min or _float > _max:
             raise argparse.ArgumentTypeError(
-                f"{tc.fg.yellow}Value must be between {int(MIN/1000):} and {int(MAX/1000):} (kB){tc.reset}"
+                f"{tc.fg.yellow}Value must be between {int(_min/1000):} and {int(_max/1000):} (kB){tc.reset}"
             )
-        return f
+        return _float
 
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="destination url -- surround url string with double quotes")
     parser.add_argument(
         "-s",
-        metavar="N",
+        metavar="size limit",
         dest="size",
         type=size_limit,
         default=20000,
-        help="size limit -- enter a value from 10 to 1000 (default = 20, less than 20kB will not be downloaded)",
+        help="enter a value from 10 to 1000 (default = 20, less than 20kB will not be downloaded)",
     )
     parser.add_argument(
         "-e",
         dest="ext",
-        metavar="",
+        metavar="exclude",
         default=False,
         help="exclude image type/extension, i.e., exclude gif, jpg, webp, etc.",
     )
