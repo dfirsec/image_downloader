@@ -102,7 +102,7 @@ class Worker:
             if status in (403, 429):
                 pass
             else:
-                logger.error(f"{str(e)}")
+                logger.error(f"{str(err)}")
         except requests.exceptions.RequestException as err:
             logger.error(f"{str(err)}")
         else:

@@ -1,5 +1,6 @@
+Pillow
 beautifulsoup4
 cfscrape
 coloredlogs
-Pillow
+lxml
 requests
