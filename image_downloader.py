@@ -1,3 +1,13 @@
+"""
+Python script parses tags that contain potential
+links to image files and passes the results
+to a downloader.
+"""
+
+__author__ = "DFIRSec (@pulsecode)"
+__version__ = "v0.1.2"
+__description__ = "Website Image Downloader"
+
 import argparse
 import hashlib
 import json
@@ -18,10 +28,6 @@ from bs4 import BeautifulSoup
 from PIL import Image
 
 from termcolors import Termcolors
-
-__author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.1.1"
-__description__ = "Website Image Downloader"
 
 # Primary logger
 logger = logging.getLogger(__name__)
@@ -120,7 +126,7 @@ class Worker:
             regex_url = r"(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=\*]*))"
 
             # find all potential images sources
-            img_src = ["data-src", "src", "data-fallback-src", "data-srcset", "srcset"]
+            img_src = ["data-src", "data-url", "src", "data-fallback-src", "data-srcset", "srcset"]
             links1 = [link.get(src) for src in img_src for link in soup.find_all("img") if link.get(src) is not None]
             links2 = [i["href"] for i in (img.find_parent("a") for img in soup.select("a[href] img"))]
             links3 = [link.get("href") for link in soup.find_all("a") if link.get("href") is not None]
