@@ -1,6 +1,7 @@
 Pillow
 beautifulsoup4
 cfscrape
+colorama
 coloredlogs
 lxml
 requests
