@@ -19,8 +19,8 @@ from utils import FileHashing, Workers, Logging, dir_setup
 
 # Initialize terminal colors
 init()
-yellow = Fore.YELLOW
-reset = Fore.RESET
+YELLOW = Fore.YELLOW
+RESET = Fore.RESET
 
 
 def main(url, size, ext=None, hashing=None):
@@ -42,7 +42,7 @@ def main(url, size, ext=None, hashing=None):
 
 
 if __name__ == "__main__":
-    banner = fr"""
+    banner = rf"""
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
     | I m a g e   D o w n l o a d e r |
     +-+-+-+-+-+ +-+-+-+-+-+-+-+-+-+-+-+
@@ -58,15 +58,15 @@ if __name__ == "__main__":
         _min = 10000
         _max = 1000000
         try:
-            _float = int(float(arg) * 10 ** 3)
+            _float = int(float(arg) * 10**3)
         except ValueError as err:
-            raise argparse.ArgumentTypeError(f"{yellow}Argument must be an integer value{reset}") from err
+            raise argparse.ArgumentTypeError(f"{YELLOW}Argument must be an integer value{RESET}") from err
         if _float < _min or _float > _max:
             raise argparse.ArgumentTypeError(
-                f"{yellow}Value must be between {int(_min / 1000):} and {int(_max / 1000):} (kB){reset}"
+                f"{YELLOW}Value must be between {_min // 1000:} and {_max // 1000:} (kB){RESET}"
             )
-        return _float
 
+        return _float
 
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="destination url -- surround url string with double quotes")

@@ -1,7 +1,3 @@
-__author__ = "DFIRSec (@pulsecode)"
-__version__ = "v0.1.2"
-__description__ = "Website Image Downloader"
-
 import hashlib
 import json
 import logging
@@ -10,22 +6,23 @@ import shutil
 import sys
 from functools import partial
 from pathlib import Path
+from typing import List
 from urllib.parse import urljoin, urlparse
 
 import cfscrape
 import coloredlogs
 import requests
-from PIL import Image
 from bs4 import BeautifulSoup
-from colorama import init, Fore
+from colorama import Fore, init
+from PIL import Image
 
 # Initialize terminal colors
 init()
-gray = Fore.LIGHTBLACK_EX
-green = Fore.GREEN
-yellow = Fore.YELLOW
-reset = Fore.RESET
-magenta = Fore.MAGENTA
+GRAY = Fore.LIGHTBLACK_EX
+GREEN = Fore.GREEN
+YELLOW = Fore.YELLOW
+RESET = Fore.RESET
+MAGENTA = Fore.MAGENTA
 
 # Base directory path
 parent = Path(__file__).resolve().parent
@@ -40,6 +37,7 @@ def dir_setup(url):
     return path
 
 
+# It takes a URL, creates a directory, and hashes all the files in that directory
 class FileHashing:
     """Return image file hash values."""
 
@@ -47,28 +45,40 @@ class FileHashing:
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
 
     @staticmethod
-    def get_hash(filepath, bs=65536):
+    def get_hash(filepath, blocksize=65536):
+        """
+        It reads the file in chunks of 65536 bytes, and updates the hash with each chunk.
+
+        :param filepath: The path to the file you want to hash
+        :param blocksize: The size of the block to read from the file, defaults to 65536 (optional)
+        :return: The hash of the file.
+        """
         hasher = hashlib.sha256()
-        with open(filepath, "rb") as file_obj:
-            for chunk in iter(partial(file_obj.read, bs), b""):
+        with open(filepath, "rb") as fileobj:
+            for chunk in iter(partial(fileobj.read, blocksize), b""):
                 hasher.update(chunk)
         return hasher.hexdigest()
 
     def file_hash(self, url):
+        """
+        It takes a url, checks if a json file exists, if not it creates one, then it creates a list of
+        files in the directory, then it creates a dictionary of the file names and hashes, then it opens
+        the json file, loads the data, updates the data with the new dictionary, then it writes the data
+        to the json file.
+
+        :param url: The URL of the website you want to download
+        """
         if not self.hashed_json.exists():
-            with open(self.hashed_json, "w") as file_obj:
-                file_obj.write(json.dumps({}))
+            with open(self.hashed_json, "w", encoding="utf-8") as fileobj:
+                fileobj.write(json.dumps({}))
 
-        hashes = {}
         files = [f for f in Path(dir_setup(url)).iterdir() if f.is_file() and not f.name.endswith("json")]
-        for _file in files:
-            hashes.update({_file.name: self.get_hash(_file)})
-
-        with open(self.hashed_json) as file_obj:
+        hashes = {_file.name: self.get_hash(_file) for _file in files}
+        with open(self.hashed_json, encoding="utf-8") as file_obj:
             data = json.load(file_obj)
         data.update(hashes)
 
-        with open(self.hashed_json, "w") as file_obj:
+        with open(self.hashed_json, "w", encoding="utf-8") as file_obj:
             json.dump(data, file_obj, indent=4)
 
 
@@ -82,7 +92,7 @@ class Logging:
 class Workers:
     """Content and link scraper."""
 
-    def __init__(self, url, size, ext):
+    def __init__(self, url: str, size: int, ext: str):
         self.hashed_json = Path(dir_setup(url)).joinpath("hashed_files.json")
         self.url = url
         self.parser = urlparse(url)
@@ -93,7 +103,14 @@ class Workers:
         # keep track of small files not downloaded
         self.small_files = Path(dir_setup(url)).joinpath("small_image_files.log")
 
-    def scraper(self, url):
+    def scraper(self, url: str):
+        """
+        It takes a URL, makes a request to it, and returns the response
+
+        :param url: str = "hxxps://URL"
+        :type url: str
+        :return: A response object.
+        """
         cloudflare_scraper = cfscrape.CloudflareScraper()
         resp = cloudflare_scraper.get(url, stream=True, timeout=10)
         resp.headers.update(
@@ -111,9 +128,7 @@ class Workers:
             resp.raise_for_status()
         except (requests.HTTPError, requests.ReadTimeout) as err:
             status = err.response.status_code
-            if status in (403, 429):
-                pass
-            else:
+            if status not in (403, 429):
                 self.log.error(f"{str(err)}")
         except requests.exceptions.RequestException as err:
             self.log.error(f"{str(err)}")
@@ -122,7 +137,15 @@ class Workers:
 
         return None
 
-    def get_links(self, url):
+    def get_links(self, url: str) -> List:
+        """
+        It takes a url, scrapes the page for image links, validates the links, and returns a list of
+        valid links
+
+        :param url: str = "hxxps://URL"
+        :type url: str
+        :return: A list of urls
+        """
         self.log.info(f"{'Gathering image links':>15}")
         try:
             resp = self.scraper(url)
@@ -131,8 +154,10 @@ class Workers:
             sys.exit(self.log.error("Problem encountered accessing content"))
         else:
             # regex to validate urls
-            regex_url = r"(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]" \
-                        r"{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=\*]*))"
+            regex_url = (
+                r"(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]"
+                r"{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=\*]*))"
+            )
 
             # find all potential images sources
             img_src = ["data-src", "data-url", "src", "data-fallback-src", "data-srcset", "srcset"]
@@ -144,15 +169,22 @@ class Workers:
             # validate the urls from combined full list
             links_joined = [urljoin(url, link) for link in matches]
             valid_url = [match.group(0) for match in re.finditer(regex_url, str(links_joined))]
-            results = list(set(valid_url))  # remove any duplicates from list
-
-            # if no images found
-            if not results:
-                sys.exit(self.log.info(f"{yellow}No images available for download{reset}"))
-            else:
+            if results := list(set(valid_url)):
                 return results
+            sys.exit(self.log.info(f"{YELLOW}No images available for download{RESET}"))
 
-    def downloader(self, url, filename, size_results):
+    def downloader(self, url: str, filename: Path, size_results: str):
+        """
+        It downloads a file from a URL, and writes it to a file on disk
+
+        :param url: str = The URL of the file to download
+        :type url: str
+        :param filename: The name of the file to be downloaded
+        :type filename: Path
+        :param size_results: str = "1.2 MB"
+        :type size_results: str
+        :return: The filename is being returned.
+        """
         session = requests.Session()
         resp = session.get(url, stream=True)
         try:
@@ -166,7 +198,17 @@ class Workers:
                 self.log.info(f"{'Downloaded':>10} : {size_results}")
             return filename
 
-    def processor(self, directory, url):
+    def processor(self, directory: Path, url: str) -> None:
+        """
+        It checks if the image file format is in the list of image file formats, then it checks if the
+        image file format argument is passed, then it checks if the image file size is less than the
+        image file size argument, then it passes the image file to the file downloader.
+
+        :param directory: Path
+        :type directory: Path
+        :param url: The URL of the image to download
+        :type url: str
+        """
         resp = self.scraper(url)
         img_path = Path(directory).joinpath(Path(url).name)
         try:
@@ -197,10 +239,10 @@ class Workers:
                 # replace file suffix with actual image subtype
                 suffix = img_path.suffix.replace(".", "")
                 if suffix != img_subtype:
-                    img_path = Path(directory).joinpath(repl_str + "." + img_subtype)
+                    img_path = Path(directory).joinpath(f"{repl_str}.{img_subtype}")
 
                 # image size results wrapper
-                size_results = f"{img_path.name} {gray}[{kb_size} kB]{reset}"
+                size_results = f"{img_path.name} {GRAY}[{kb_size} kB]{RESET}"
 
                 # skip if image already exists in download directory
                 if img_path.exists():
@@ -219,7 +261,7 @@ class Workers:
                         level=logging.INFO,
                     )
                     self.log.info(f"{resp.url} [{kb_size} kB]")
-                    self.log.info(f"{magenta}{'Skipped':>10}{reset} : {size_results}")
+                    self.log.info(f"{MAGENTA}{'Skipped':>10}{RESET} : {size_results}")
 
                 # pass to file downloader
                 else:
